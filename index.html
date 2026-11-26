@@ -177,6 +177,8 @@
   .day-breakdown .in dd { color: var(--in); }
   .day-breakdown .out dd { color: var(--out); }
 
+  .day-note { margin: 12px 0 0; font-size: 12.5px; color: #8A958F; }
+
   /* ---- the month ---- */
 
   .month-nav { display: flex; gap: 6px; }
@@ -329,6 +331,49 @@
     font-variant-numeric: tabular-nums;
   }
 
+  /* ---- backup ---- */
+
+  .backup-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 0 0 8px; }
+
+  .chip {
+    min-height: 44px;
+    padding: 10px 8px;
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    background: var(--card);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .chip:active { background: var(--amber-soft); }
+  .chip:disabled { opacity: 0.5; }
+
+  .block-button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    min-height: 46px;
+    margin: 0 0 8px;
+    padding: 10px 14px;
+    border: 0;
+    border-radius: 14px;
+    background: var(--amber-soft);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 600;
+    text-align: center;
+    cursor: pointer;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .block-button:active { background: #F6E3C2; }
+
   /* ---- what was read ---- */
 
   .meta-line { margin: -2px 0 10px; font-size: 13px; color: var(--ink-2); }
@@ -391,6 +436,7 @@
       <div class="in"><dt>In</dt><dd id="day-income">$0.00</dd></div>
       <div class="out"><dt>Out</dt><dd id="day-expense">$0.00</dd></div>
     </dl>
+    <p class="day-note" id="day-note" hidden>Income is spread across the days it covers.</p>
   </section>
 
   <section class="card">
@@ -446,6 +492,20 @@
     <p class="footnote" id="storage-note">Read in this page: the image is never uploaded. The text engine downloads once (about 15 MB) and is then cached.</p>
   </section>
 
+  <section class="card">
+    <h2 class="label">Backup</h2>
+    <p class="hint">Everything stays on this phone. Copy it out, or save a file you can put back.</p>
+    <div class="backup-actions">
+      <button type="button" class="chip" id="copy-transactions">Copy transactions</button>
+      <button type="button" class="chip" id="copy-days">Copy daily totals</button>
+    </div>
+    <button type="button" class="block-button" id="save-backup">Save a backup file</button>
+    <label class="block-button" for="restore-file">Restore from a file</label>
+    <input type="file" id="restore-file" accept="application/json,.json" class="sr-only">
+    <p class="status" id="backup-status" role="status" aria-live="polite"></p>
+    <p class="footnote">The spreadsheet copy is tab-separated: paste it straight into a sheet. Expenses are negative, so an amount column sums to your net.</p>
+  </section>
+
   <section class="card" id="raw" hidden>
     <div class="label-row">
       <h2 class="label">What was read</h2>
@@ -466,6 +526,7 @@
   import { parseTransactions, dollarCurrencyForLocale, isChromeLine, normaliseLine, AMOUNT_RE } from './parser.js';
   import { dayKey, addDays, weekdayOf, dayKeyOf, dayTotals, monthTotals, incomeShare } from './ledger.js';
   import { loadLedger, saveLedger, addTransactions, addIncome, removeIncome, removeTransaction } from './storage.js';
+  import { transactionsToTsv, dailyTotalsToTsv, backupToText, readBackup, mergeBackup } from './backup.js';
 
   const els = {
     dayLabel: document.getElementById('day-label'),
@@ -473,6 +534,7 @@
     dayNet: document.getElementById('day-net'),
     dayIncome: document.getElementById('day-income'),
     dayExpense: document.getElementById('day-expense'),
+    dayNote: document.getElementById('day-note'),
     monthLabel: document.getElementById('month-label'),
     monthPrev: document.getElementById('month-prev'),
     monthNext: document.getElementById('month-next'),
@@ -494,6 +556,11 @@
     rawMeta: document.getElementById('raw-meta'),
     lines: document.getElementById('lines'),
     copy: document.getElementById('copy'),
+    copyTransactions: document.getElementById('copy-transactions'),
+    copyDays: document.getElementById('copy-days'),
+    saveBackup: document.getElementById('save-backup'),
+    restoreFile: document.getElementById('restore-file'),
+    backupStatus: document.getElementById('backup-status'),
   };
 
   // "$" means CAD on a Canadian phone, USD elsewhere.
@@ -513,12 +580,15 @@
     'recognizing text': 'Reading the text…',
   };
 
-  const TODAY = dayKey(new Date());
-
   let ledger = loadLedger();
-  let selected = TODAY;
-  let view = { year: Number(TODAY.slice(0, 4)), month: Number(TODAY.slice(5, 7)) };
+  let selected = todayKey();
+  let view = { year: Number(selected.slice(0, 4)), month: Number(selected.slice(5, 7)) };
   let lastLines = [];
+
+  /** Today, read again on every render: the app can sit open across midnight. */
+  function todayKey() {
+    return dayKey(new Date());
+  }
 
   /* ---------------------------------------------------------------------- *
    * The day, the month, the rows
@@ -535,7 +605,8 @@
     const totals = dayTotals(selected, ledger);
 
     els.dayLabel.textContent = shortDay(selected);
-    els.dayToday.textContent = selected === TODAY ? 'Today' : '';
+    els.dayToday.textContent = selected === todayKey() ? 'Today' : '';
+    els.dayNote.hidden = ledger.incomes.length === 0;
 
     els.dayNet.textContent = signedAmount(totals.netCents);
     els.dayNet.className = totals.netCents > 0 ? 'day-net up'
@@ -548,6 +619,7 @@
 
   function renderCalendar() {
     const days = monthTotals(view.year, view.month, ledger);
+    const today = todayKey();
     const leading = weekdayOf(dayKeyOf(view.year, view.month, 1));
     els.monthLabel.textContent = new Date(view.year, view.month - 1, 1)
       .toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
@@ -563,7 +635,7 @@
       const cell = document.createElement('button');
       cell.type = 'button';
       cell.className = 'cal-cell';
-      if (day.key === TODAY) cell.classList.add('today');
+      if (day.key === today) cell.classList.add('today');
       if (day.key === selected) cell.classList.add('selected');
       if (day.netCents > 0) cell.classList.add('up');
       if (day.netCents < 0) cell.classList.add('down');
@@ -708,7 +780,7 @@
    * Income
    * ---------------------------------------------------------------------- */
 
-  els.incomeStart.value = TODAY;
+  els.incomeStart.value = todayKey();
 
   els.incomeForm.addEventListener('submit', (event) => {
     event.preventDefault();
@@ -740,7 +812,7 @@
     renderAll();
 
     els.incomeForm.reset();
-    els.incomeStart.value = TODAY;
+    els.incomeStart.value = todayKey();
     els.incomeDays.value = '14';
 
     if (!saved) {
@@ -974,6 +1046,94 @@
       setStatus('Lines copied — paste them here and I can see exactly what the browser read.', 'done');
     } catch (error) {
       setStatus('Could not copy the lines.', 'error');
+    }
+  });
+
+  /* ---------------------------------------------------------------------- *
+   * Backup
+   * ---------------------------------------------------------------------- */
+
+  function setBackupStatus(text, tone) {
+    els.backupStatus.textContent = text;
+    if (tone) els.backupStatus.dataset.tone = tone;
+    else delete els.backupStatus.dataset.tone;
+  }
+
+  const canCopy = Boolean(navigator.clipboard && navigator.clipboard.writeText);
+  if (!canCopy) {
+    els.copyTransactions.disabled = true;
+    els.copyDays.disabled = true;
+  }
+
+  async function copyForSheet(text, done) {
+    try {
+      await navigator.clipboard.writeText(text);
+      setBackupStatus(done, 'done');
+    } catch (error) {
+      setBackupStatus('Could not copy to the clipboard.', 'error');
+    }
+  }
+
+  els.copyTransactions.addEventListener('click', () => {
+    const count = ledger.transactions.length;
+    if (count === 0) {
+      setBackupStatus('No transactions to copy yet.', '');
+      return;
+    }
+    copyForSheet(
+      transactionsToTsv(ledger.transactions),
+      `Copied ${count} transaction${count === 1 ? '' : 's'} — paste into a sheet.`,
+    );
+  });
+
+  els.copyDays.addEventListener('click', () => {
+    if (ledger.transactions.length === 0 && ledger.incomes.length === 0) {
+      setBackupStatus('Nothing to copy yet.', '');
+      return;
+    }
+    copyForSheet(dailyTotalsToTsv(ledger), 'Copied the daily totals — paste into a sheet.');
+  });
+
+  els.saveBackup.addEventListener('click', () => {
+    const blob = new Blob([backupToText(ledger, new Date())], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `sumday-backup-${todayKey()}.json`;
+    document.body.append(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+
+    setBackupStatus('Saved. Keep it somewhere other than this phone.', 'done');
+  });
+
+  els.restoreFile.addEventListener('change', async () => {
+    const file = els.restoreFile.files && els.restoreFile.files[0];
+    els.restoreFile.value = '';
+    if (!file) return;
+
+    try {
+      const incoming = readBackup(await file.text());
+      const result = mergeBackup(ledger, incoming);
+      ledger = result.ledger;
+
+      if (!saveLedger(ledger)) {
+        setBackupStatus('This browser would not save the restore. Nothing is being kept on this device.', 'error');
+        return;
+      }
+      renderAll();
+
+      const skipped = result.skippedTransactions + result.skippedIncomes;
+      setBackupStatus(
+        `Restored ${result.addedTransactions} transaction${result.addedTransactions === 1 ? '' : 's'} and `
+          + `${result.addedIncomes} income${result.addedIncomes === 1 ? '' : 's'}`
+          + `${skipped ? `, ${skipped} already here` : ''}.`,
+        'done',
+      );
+    } catch (error) {
+      setBackupStatus(error && error.message ? error.message : 'Could not read that file.', 'error');
     }
   });
 

@@ -130,11 +130,11 @@ export function mergeTransactions(existing, rows) {
   const added = [];
 
   for (const row of rows) {
-    const base = `${row.date}|${row.merchant}|${row.amountCents}`;
+    const base = rowKey(row);
     const repeat = repeats.get(base) || 0;
     repeats.set(base, repeat + 1);
 
-    const fingerprint = `${base}|${repeat}`;
+    const fingerprint = fingerprintOf(row, repeat);
     if (seen.has(fingerprint)) continue;
     seen.add(fingerprint);
     added.push({ ...row, fingerprint });
@@ -150,6 +150,21 @@ export function mergeTransactions(existing, rows) {
 /* ------------------------------------------------------------------------- *
  * Small helpers
  * ------------------------------------------------------------------------- */
+
+/** The day, merchant and amount of a row, without the repeat count. */
+function rowKey(row) {
+  return `${row.date}|${row.merchant}|${row.amountCents}`;
+}
+
+/**
+ * The identity of a row: its day, merchant and amount, plus which repeat of
+ * that triple it is within one import. Two rows with the same fingerprint are
+ * the same purchase, so importing or restoring the same thing twice adds
+ * nothing the second time.
+ */
+export function fingerprintOf(row, repeat = 0) {
+  return `${rowKey(row)}|${repeat}`;
+}
 
 function partsOf(key) {
   const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(key));

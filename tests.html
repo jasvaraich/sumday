@@ -113,6 +113,7 @@
 <script type="module">
   import { parseTransactions, dollarCurrencyForLocale } from './parser.js';
   import { dayTotals, incomeShare, mergeTransactions, addDays } from './ledger.js';
+  import { transactionsToTsv, backupToText, readBackup, mergeBackup } from './backup.js';
   import {
     REFERENCE_DATE,
     WALLET_LINES,
@@ -236,6 +237,40 @@
     if (first.added.length !== 5) return `the first import added ${first.added.length} rows, expected 5`;
     const second = mergeTransactions(first.transactions, rows);
     return second.added.length === 0 ? true : `the second import added ${second.added.length} rows`;
+  });
+
+  check('the spreadsheet copy has a header and one row per transaction', () => {
+    const rows = parseTransactions(WALLET_LINES, REFERENCE_DATE, CANADA);
+    const lines = transactionsToTsv(rows).split('\n');
+    if (lines[0] !== 'Date\tMerchant\tAmount\tCurrency\tRead from') return `header is "${lines[0]}"`;
+    if (lines.length !== rows.length + 1) return `${lines.length} lines for ${rows.length} rows`;
+    return lines.includes('2026-09-24\tHarbour Tickets\t-24.50\tCAD\t3 hours ago')
+      ? true
+      : `no matching row in ${lines.join(' | ')}`;
+  });
+
+  check('a backup restores once, and not twice', () => {
+    const rows = parseTransactions(WALLET_LINES, REFERENCE_DATE, CANADA);
+    const source = {
+      transactions: mergeTransactions([], rows).transactions,
+      incomes: [{ id: 'i1', startsOn: '2026-09-18', amountCents: 140000, coversDays: 14, label: 'Pay' }],
+    };
+
+    const incoming = readBackup(backupToText(source));
+    const restored = mergeBackup({ transactions: [], incomes: [] }, incoming);
+    if (restored.addedTransactions !== 5) return `restored ${restored.addedTransactions} rows, expected 5`;
+
+    const again = mergeBackup(restored.ledger, incoming);
+    if (again.addedTransactions !== 0) return `restoring twice added ${again.addedTransactions} more`;
+    return again.addedIncomes === 0 ? true : `restoring twice added ${again.addedIncomes} more incomes`;
+  });
+
+  check('a file that is not a backup is refused', () => {
+    let refused = 0;
+    for (const text of ['not json', '{"hello":true}']) {
+      try { readBackup(text); } catch (error) { refused += 1; }
+    }
+    return refused === 2 ? true : `only ${refused} of the 2 were refused`;
   });
 
   const list = document.getElementById('checks');
