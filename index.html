@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>SumDay</title>
-<meta name="description" content="SumDay — read an Amex Wallet screenshot on this device.">
+<meta name="description" content="SumDay — one number per day, money in minus money out.">
 <meta name="theme-color" content="#F7F4ED">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -69,9 +69,11 @@
     color: var(--ink-2);
   }
 
+  .label-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
+  .label-row .label { margin-bottom: 10px; }
+
   .hint { margin: 0 0 14px; color: var(--ink-2); font-size: 14.5px; }
 
-  .label-row { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; }
   .link-button {
     margin: 0 0 10px;
     padding: 0;
@@ -142,13 +144,105 @@
 
   .footnote { margin: 8px 0 0; font-size: 12.5px; line-height: 1.45; color: #8A958F; }
 
-  .meta-line { margin: -2px 0 10px; font-size: 13px; color: var(--ink-2); }
+  /* ---- the day ---- */
+
+  .day-net {
+    margin: 0;
+    font-family: ui-rounded, -apple-system, system-ui, sans-serif;
+    font-size: 42px;
+    font-weight: 600;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums;
+  }
+  .day-net.up { color: var(--in); }
+  .day-net.down { color: var(--out); }
+
+  .day-breakdown { display: flex; gap: 26px; margin: 14px 0 0; }
+  .day-breakdown div { display: flex; flex-direction: column; gap: 2px; }
+  .day-breakdown dt {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+  .day-breakdown dd {
+    margin: 0;
+    font-family: ui-rounded, -apple-system, system-ui, sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+  .day-breakdown .in dd { color: var(--in); }
+  .day-breakdown .out dd { color: var(--out); }
+
+  /* ---- the month ---- */
+
+  .month-nav { display: flex; gap: 6px; }
+  .nav {
+    width: 36px;
+    height: 30px;
+    margin-bottom: 10px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    background: var(--card);
+    color: var(--ink-2);
+    font-family: inherit;
+    font-size: 15px;
+    line-height: 1;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .nav:active { background: var(--amber-soft); }
+
+  .weekdays, .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .weekdays { margin-bottom: 2px; }
+  .weekdays span {
+    text-align: center;
+    font-size: 10px;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: #A8B1AC;
+  }
+
+  .cal-cell {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 1px;
+    min-height: 44px;
+    padding: 3px 0;
+    border: 1px solid transparent;
+    border-radius: 11px;
+    background: none;
+    font-family: inherit;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .cal-cell.blank { cursor: default; }
+  .cal-cell .num { font-size: 13px; font-weight: 600; color: var(--ink); font-variant-numeric: tabular-nums; }
+  .cal-cell .net {
+    font-family: ui-rounded, -apple-system, system-ui, sans-serif;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--ink-2);
+    font-variant-numeric: tabular-nums;
+  }
+  .cal-cell.up .net { color: var(--in); }
+  .cal-cell.down .net { color: var(--out); }
+  .cal-cell.today { border-color: var(--border); }
+  .cal-cell.today .num { color: var(--ink); }
+  .cal-cell.selected { background: var(--amber-soft); border-color: #F1DDB6; }
+
+  /* ---- rows on the day ---- */
 
   .txn {
     display: flex;
     align-items: baseline;
     gap: 14px;
-    padding: 13px 0;
+    padding: 12px 0;
     border-top: 1px solid var(--border);
   }
   .txn:first-child { border-top: 0; padding-top: 2px; }
@@ -165,6 +259,79 @@
     color: var(--out);
     white-space: nowrap;
   }
+  .remove {
+    flex: none;
+    margin-left: 4px;
+    padding: 0 2px;
+    border: 0;
+    background: none;
+    color: #B9C0BC;
+    font-family: inherit;
+    font-size: 17px;
+    line-height: 1;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .remove:active { color: var(--out); }
+
+  .calm { margin: 2px 0 0; font-size: 13.5px; color: var(--ink-2); }
+
+  /* ---- income ---- */
+
+  .income-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 0; }
+  .field { display: flex; flex-direction: column; gap: 4px; }
+  .field label {
+    font-size: 10.5px;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+  .field input {
+    width: 100%;
+    min-height: 42px;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    background: #FFFDF9;
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 16px;
+  }
+  .field input:focus { outline: none; border-color: var(--amber); box-shadow: 0 0 0 3px var(--amber-soft); }
+  .secondary {
+    grid-column: span 2;
+    min-height: 44px;
+    border: 0;
+    border-radius: 14px;
+    background: var(--amber-soft);
+    color: var(--ink);
+    font-family: inherit;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .secondary:active { background: #F6E3C2; }
+
+  .income-list { list-style: none; margin: 14px 0 0; padding: 0; }
+  .income-list li { display: flex; align-items: baseline; gap: 10px; padding: 11px 0; border-top: 1px solid #F1ECE1; }
+  .income-main { min-width: 0; }
+  .income-name { font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+  .income-meta { margin-top: 2px; font-size: 12.5px; color: var(--ink-2); }
+  .income-share {
+    margin-left: auto;
+    font-family: ui-rounded, -apple-system, system-ui, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--in);
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* ---- what was read ---- */
+
+  .meta-line { margin: -2px 0 10px; font-size: 13px; color: var(--ink-2); }
 
   .lines {
     list-style: none;
@@ -211,8 +378,63 @@
 <div class="sheet">
   <header class="head">
     <h1>SumDay</h1>
-    <p class="tagline">Wallet import</p>
+    <p class="tagline">One number per day</p>
   </header>
+
+  <section class="card">
+    <div class="label-row">
+      <h2 class="label" id="day-label">Day</h2>
+      <span class="label" id="day-today"></span>
+    </div>
+    <p class="day-net" id="day-net">$0.00</p>
+    <dl class="day-breakdown">
+      <div class="in"><dt>In</dt><dd id="day-income">$0.00</dd></div>
+      <div class="out"><dt>Out</dt><dd id="day-expense">$0.00</dd></div>
+    </dl>
+  </section>
+
+  <section class="card">
+    <div class="label-row">
+      <h2 class="label" id="month-label"></h2>
+      <div class="month-nav">
+        <button type="button" class="nav" id="month-prev" aria-label="Previous month">‹</button>
+        <button type="button" class="nav" id="month-next" aria-label="Next month">›</button>
+      </div>
+    </div>
+    <div class="weekdays" aria-hidden="true">
+      <span>S</span><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span>
+    </div>
+    <div class="calendar" id="calendar"></div>
+  </section>
+
+  <section class="card">
+    <h2 class="label">That day</h2>
+    <div id="day-rows"></div>
+  </section>
+
+  <section class="card">
+    <h2 class="label">Income</h2>
+    <form class="income-form" id="income-form">
+      <div class="field">
+        <label for="income-amount">Amount</label>
+        <input id="income-amount" type="text" inputmode="decimal" placeholder="1400.00" autocomplete="off" required>
+      </div>
+      <div class="field">
+        <label for="income-days">Covers, days</label>
+        <input id="income-days" type="number" inputmode="numeric" min="1" step="1" value="14" required>
+      </div>
+      <div class="field">
+        <label for="income-start">Arrives</label>
+        <input id="income-start" type="date" required>
+      </div>
+      <div class="field">
+        <label for="income-name">What</label>
+        <input id="income-name" type="text" placeholder="Pay" autocomplete="off">
+      </div>
+      <button type="submit" class="secondary">Add income</button>
+    </form>
+    <ul class="income-list" id="income-list"></ul>
+  </section>
 
   <section class="card">
     <h2 class="label">Import from Wallet</h2>
@@ -221,13 +443,7 @@
     <input type="file" id="file" accept="image/*" class="sr-only">
     <div class="progress" id="progress" hidden><span class="bar" id="bar"></span></div>
     <p class="status" id="status" role="status" aria-live="polite"></p>
-    <p class="footnote">Read in this page: the image is never uploaded. The text engine downloads once (about 15 MB) and is then cached.</p>
-  </section>
-
-  <section class="card" id="results" hidden>
-    <h2 class="label">Transactions</h2>
-    <p class="meta-line" id="results-meta"></p>
-    <div id="rows"></div>
+    <p class="footnote" id="storage-note">Read in this page: the image is never uploaded. The text engine downloads once (about 15 MB) and is then cached.</p>
   </section>
 
   <section class="card" id="raw" hidden>
@@ -241,41 +457,44 @@
 
   <footer class="foot">
     <p>Add to Home Screen from Safari’s Share menu to run it standalone.</p>
-    <p><a href="./tests.html">Parser test</a></p>
+    <p><a href="./tests.html">Tests</a></p>
   </footer>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js"></script>
 <script type="module">
   import { parseTransactions, dollarCurrencyForLocale, isChromeLine, normaliseLine, AMOUNT_RE } from './parser.js';
+  import { dayKey, addDays, weekdayOf, dayKeyOf, dayTotals, monthTotals, incomeShare } from './ledger.js';
+  import { loadLedger, saveLedger, addTransactions, addIncome, removeIncome, removeTransaction } from './storage.js';
 
   const els = {
+    dayLabel: document.getElementById('day-label'),
+    dayToday: document.getElementById('day-today'),
+    dayNet: document.getElementById('day-net'),
+    dayIncome: document.getElementById('day-income'),
+    dayExpense: document.getElementById('day-expense'),
+    monthLabel: document.getElementById('month-label'),
+    monthPrev: document.getElementById('month-prev'),
+    monthNext: document.getElementById('month-next'),
+    calendar: document.getElementById('calendar'),
+    dayRows: document.getElementById('day-rows'),
+    incomeForm: document.getElementById('income-form'),
+    incomeAmount: document.getElementById('income-amount'),
+    incomeStart: document.getElementById('income-start'),
+    incomeDays: document.getElementById('income-days'),
+    incomeName: document.getElementById('income-name'),
+    incomeList: document.getElementById('income-list'),
     pick: document.getElementById('pick'),
     file: document.getElementById('file'),
     progress: document.getElementById('progress'),
     bar: document.getElementById('bar'),
     status: document.getElementById('status'),
-    results: document.getElementById('results'),
-    resultsMeta: document.getElementById('results-meta'),
-    rows: document.getElementById('rows'),
+    storageNote: document.getElementById('storage-note'),
     raw: document.getElementById('raw'),
     rawMeta: document.getElementById('raw-meta'),
     lines: document.getElementById('lines'),
     copy: document.getElementById('copy'),
   };
-
-  // The last lines a read produced, so "Copy lines" can hand them back whole.
-  let lastLines = [];
-  if (!navigator.clipboard || !navigator.clipboard.writeText) els.copy.hidden = true;
-
-  els.copy.addEventListener('click', async () => {
-    try {
-      await navigator.clipboard.writeText(lastLines.join('\n'));
-      setStatus('Lines copied — paste them here and I can see exactly what the browser read.', 'done');
-    } catch (error) {
-      setStatus('Could not copy the lines.', 'error');
-    }
-  });
 
   // "$" means CAD on a Canadian phone, USD elsewhere.
   const DOLLAR_CURRENCY = dollarCurrencyForLocale(navigator.language || 'en-US');
@@ -294,6 +513,247 @@
     'recognizing text': 'Reading the text…',
   };
 
+  const TODAY = dayKey(new Date());
+
+  let ledger = loadLedger();
+  let selected = TODAY;
+  let view = { year: Number(TODAY.slice(0, 4)), month: Number(TODAY.slice(5, 7)) };
+  let lastLines = [];
+
+  /* ---------------------------------------------------------------------- *
+   * The day, the month, the rows
+   * ---------------------------------------------------------------------- */
+
+  function renderAll() {
+    renderDay();
+    renderCalendar();
+    renderDayRows();
+    renderIncomes();
+  }
+
+  function renderDay() {
+    const totals = dayTotals(selected, ledger);
+
+    els.dayLabel.textContent = shortDay(selected);
+    els.dayToday.textContent = selected === TODAY ? 'Today' : '';
+
+    els.dayNet.textContent = signedAmount(totals.netCents);
+    els.dayNet.className = totals.netCents > 0 ? 'day-net up'
+      : totals.netCents < 0 ? 'day-net down'
+      : 'day-net';
+
+    els.dayIncome.textContent = formatAmount(totals.incomeCents, currency());
+    els.dayExpense.textContent = formatAmount(totals.expenseCents, currency());
+  }
+
+  function renderCalendar() {
+    const days = monthTotals(view.year, view.month, ledger);
+    const leading = weekdayOf(dayKeyOf(view.year, view.month, 1));
+    els.monthLabel.textContent = new Date(view.year, view.month - 1, 1)
+      .toLocaleDateString(undefined, { month: 'long', year: 'numeric' });
+
+    const cells = document.createDocumentFragment();
+    for (let i = 0; i < leading; i += 1) {
+      const blank = document.createElement('span');
+      blank.className = 'cal-cell blank';
+      cells.append(blank);
+    }
+
+    for (const day of days) {
+      const cell = document.createElement('button');
+      cell.type = 'button';
+      cell.className = 'cal-cell';
+      if (day.key === TODAY) cell.classList.add('today');
+      if (day.key === selected) cell.classList.add('selected');
+      if (day.netCents > 0) cell.classList.add('up');
+      if (day.netCents < 0) cell.classList.add('down');
+
+      const number = document.createElement('span');
+      number.className = 'num';
+      number.textContent = String(Number(day.key.slice(8)));
+
+      const net = document.createElement('span');
+      net.className = 'net';
+      const active = day.incomeCents !== 0 || day.expenseCents !== 0;
+      net.textContent = active ? compactAmount(day.netCents) : '';
+
+      cell.append(number, net);
+      cell.setAttribute('aria-label', `${longDay(day.key)}, ${signedAmount(day.netCents)}`);
+      cell.addEventListener('click', () => {
+        selected = day.key;
+        renderDay();
+        renderCalendar();
+        renderDayRows();
+      });
+      cells.append(cell);
+    }
+
+    els.calendar.textContent = '';
+    els.calendar.append(cells);
+  }
+
+  function renderDayRows() {
+    const rows = ledger.transactions.filter((transaction) => transaction.date === selected);
+
+    els.dayRows.textContent = '';
+
+    if (rows.length === 0) {
+      const calm = document.createElement('p');
+      calm.className = 'calm';
+      calm.textContent = 'Nothing recorded on this day.';
+      els.dayRows.append(calm);
+      return;
+    }
+
+    const list = document.createDocumentFragment();
+    for (const row of rows) {
+      const el = document.createElement('div');
+      el.className = 'txn';
+
+      const main = document.createElement('div');
+      main.className = 'txn-main';
+
+      const name = document.createElement('div');
+      name.className = 'txn-name';
+      name.textContent = row.merchant || 'No merchant read';
+
+      const meta = document.createElement('div');
+      meta.className = 'txn-meta';
+      meta.textContent = row.dateSource ? `read “${row.dateSource}”` : 'no date read';
+
+      main.append(name, meta);
+
+      const amount = document.createElement('div');
+      amount.className = 'txn-amount';
+      amount.textContent = formatAmount(row.amountCents, row.currencyCode);
+
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'remove';
+      remove.textContent = '×';
+      remove.setAttribute('aria-label', `Remove ${row.merchant}`);
+      remove.addEventListener('click', () => {
+        ledger = removeTransaction(ledger, row.fingerprint);
+        persist('Removed.');
+        renderAll();
+      });
+
+      el.append(main, amount, remove);
+      list.append(el);
+    }
+    els.dayRows.append(list);
+  }
+
+  function renderIncomes() {
+    els.incomeList.textContent = '';
+
+    if (ledger.incomes.length === 0) {
+      const calm = document.createElement('li');
+      calm.className = 'calm';
+      calm.textContent = 'No income yet. Add the cheque you get, and the days it has to cover.';
+      els.incomeList.append(calm);
+      return;
+    }
+
+    const list = document.createDocumentFragment();
+    for (const income of ledger.incomes) {
+      const el = document.createElement('li');
+
+      const main = document.createElement('div');
+      main.className = 'income-main';
+
+      const name = document.createElement('div');
+      name.className = 'income-name';
+      name.textContent = income.label || 'Income';
+
+      const meta = document.createElement('div');
+      meta.className = 'income-meta';
+      const last = addDays(income.startsOn, income.coversDays - 1);
+      meta.textContent = `${formatAmount(income.amountCents, currency())} from ${shortDay(income.startsOn)} to ${shortDay(last)}`;
+
+      main.append(name, meta);
+
+      const share = document.createElement('div');
+      share.className = 'income-share';
+      share.textContent = `${formatAmount(incomeShare(income, income.startsOn), currency())}/day`;
+
+      const remove = document.createElement('button');
+      remove.type = 'button';
+      remove.className = 'remove';
+      remove.textContent = '×';
+      remove.setAttribute('aria-label', 'Remove this income');
+      remove.addEventListener('click', () => {
+        ledger = removeIncome(ledger, income.id);
+        persist('Income removed.');
+        renderAll();
+      });
+
+      el.append(main, share, remove);
+      list.append(el);
+    }
+    els.incomeList.append(list);
+  }
+
+  els.monthPrev.addEventListener('click', () => {
+    view = view.month === 1 ? { year: view.year - 1, month: 12 } : { year: view.year, month: view.month - 1 };
+    renderCalendar();
+  });
+
+  els.monthNext.addEventListener('click', () => {
+    view = view.month === 12 ? { year: view.year + 1, month: 1 } : { year: view.year, month: view.month + 1 };
+    renderCalendar();
+  });
+
+  /* ---------------------------------------------------------------------- *
+   * Income
+   * ---------------------------------------------------------------------- */
+
+  els.incomeStart.value = TODAY;
+
+  els.incomeForm.addEventListener('submit', (event) => {
+    event.preventDefault();
+
+    const amountCents = amountFromInput(els.incomeAmount.value);
+    const startsOn = els.incomeStart.value;
+    const coversDays = Number(els.incomeDays.value);
+
+    if (!Number.isFinite(amountCents) || amountCents <= 0) {
+      setStatus('Enter an amount, for example 1400.00.', 'error');
+      return;
+    }
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(startsOn)) {
+      setStatus('Pick the day the money arrives.', 'error');
+      return;
+    }
+
+    const result = addIncome(ledger, {
+      amountCents,
+      startsOn,
+      coversDays: Number.isFinite(coversDays) && coversDays > 0 ? coversDays : 1,
+      label: els.incomeName.value,
+    });
+    ledger = result.ledger;
+    const saved = saveLedger(ledger);
+
+    selected = startsOn;
+    view = { year: Number(startsOn.slice(0, 4)), month: Number(startsOn.slice(5, 7)) };
+    renderAll();
+
+    els.incomeForm.reset();
+    els.incomeStart.value = TODAY;
+    els.incomeDays.value = '14';
+
+    if (!saved) {
+      setStatus('This browser would not save the income. Nothing is being kept on this device.', 'error');
+      return;
+    }
+    setStatus(`${formatAmount(amountCents, currency())} over ${result.income.coversDays} days.`, 'done');
+  });
+
+  /* ---------------------------------------------------------------------- *
+   * Import
+   * ---------------------------------------------------------------------- */
+
   els.file.addEventListener('change', () => {
     const file = els.file.files && els.file.files[0];
     els.file.value = '';
@@ -307,7 +767,6 @@
     }
 
     els.pick.classList.add('is-busy');
-    els.results.hidden = true;
     els.raw.hidden = true;
     setStatus('Reading the screenshot on this device…', '');
     setProgress(0);
@@ -321,15 +780,31 @@
       const referenceDate = new Date();
       const rows = parseTransactions(lines, referenceDate, { dollarCurrency: DOLLAR_CURRENCY });
 
-      showResults(lines, rows, referenceDate, prepared.inverted ? 'light-on-dark image inverted for the reader' : '');
+      const result = addTransactions(ledger, rows);
+      ledger = result.ledger;
+      const saved = saveLedger(ledger);
 
-      const count = rows.length;
-      setStatus(
-        count === 0
-          ? `No transactions in those ${lines.length} lines. The lines below show what the reader saw.`
-          : `Read ${count} transaction${count === 1 ? '' : 's'} in ${seconds.toFixed(1)} s.`,
-        count === 0 ? '' : 'done',
-      );
+      if (result.added.length > 0) {
+        const newest = result.added.map((row) => row.date).filter(Boolean).sort().pop();
+        if (newest) {
+          selected = newest;
+          view = { year: Number(newest.slice(0, 4)), month: Number(newest.slice(5, 7)) };
+        }
+      }
+
+      renderAll();
+      renderRaw(lines, result.added, prepared.inverted);
+
+      const parts = [`Read ${rows.length} row${rows.length === 1 ? '' : 's'}`];
+      if (result.added.length > 0) parts.push(`${result.added.length} new`);
+      if (result.skipped > 0) parts.push(`${result.skipped} already recorded`);
+      parts.push(`${seconds.toFixed(1)} s`);
+
+      if (!saved) {
+        setStatus('This browser would not save the rows. Nothing is being kept on this device.', 'error');
+      } else {
+        setStatus(parts.join(' · '), result.added.length > 0 ? 'done' : '');
+      }
     } catch (error) {
       const message = error && error.message ? error.message : String(error);
       setStatus(`The reader stopped: ${message}`, 'error');
@@ -356,6 +831,16 @@
     const clamped = Math.max(0, Math.min(1, fraction || 0));
     els.progress.hidden = false;
     els.bar.style.width = `${Math.round(clamped * 100)}%`;
+  }
+
+  /** Save, and say so on screen when the device refuses to keep it. */
+  function persist(message) {
+    if (saveLedger(ledger)) {
+      if (message) setStatus(message, 'done');
+      return true;
+    }
+    setStatus('This browser would not save. Nothing is being kept on this device.', 'error');
+    return false;
   }
 
   /**
@@ -426,63 +911,28 @@
     return raw.map(normaliseLine).filter((line) => line.length > 0);
   }
 
-  function showResults(lines, rows, referenceDate, note) {
+  /* ---------------------------------------------------------------------- *
+   * What was read
+   * ---------------------------------------------------------------------- */
+
+  function renderRaw(lines, added, inverted) {
     lastLines = lines;
 
     const list = document.createDocumentFragment();
-    for (const row of rows) list.append(rowElement(row));
-    els.rows.textContent = '';
-    els.rows.append(list);
+    const dates = added.map((row) => row.dateSource).filter(Boolean);
+    lines.forEach((line, index) => list.append(lineElement(line, index, dates)));
 
-    els.resultsMeta.textContent = rows.length === 0
-      ? 'No transaction rows were found.'
-      : `${rows.length} row${rows.length === 1 ? '' : 's'} · dates counted back from ${referenceDate.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' })}`;
-    els.results.hidden = rows.length === 0;
-
-    const lineList = document.createDocumentFragment();
-    lines.forEach((line, index) => lineList.append(lineElement(line, index, rows)));
     els.lines.textContent = '';
-    els.lines.append(lineList);
+    els.lines.append(list);
 
-    if (lines.length === 0) {
-      els.rawMeta.textContent = 'The reader produced no lines.';
-    } else {
-      const parts = [`${lines.length} line${lines.length === 1 ? '' : 's'}`];
-      if (note) parts.push(note);
-      parts.push('“amount” anchored a row, “date” gave its date, “dropped” is chrome');
-      els.rawMeta.textContent = parts.join(' · ');
-    }
+    const parts = [`${lines.length} line${lines.length === 1 ? '' : 's'}`];
+    if (inverted) parts.push('light-on-dark image inverted for the reader');
+    parts.push('“amount” anchored a row, “date” gave its date, “dropped” is chrome');
+    els.rawMeta.textContent = parts.join(' · ');
     els.raw.hidden = lines.length === 0;
   }
 
-  function rowElement(row) {
-    const el = document.createElement('div');
-    el.className = 'txn';
-
-    const main = document.createElement('div');
-    main.className = 'txn-main';
-
-    const name = document.createElement('div');
-    name.className = 'txn-name';
-    name.textContent = row.merchant || 'No merchant read';
-
-    const meta = document.createElement('div');
-    meta.className = 'txn-meta';
-    meta.textContent = row.date
-      ? `${readableDay(row.date)} · read “${row.dateSource}”`
-      : 'No date read';
-
-    main.append(name, meta);
-
-    const amount = document.createElement('div');
-    amount.className = 'txn-amount';
-    amount.textContent = formatAmount(row.amountCents, row.currencyCode);
-
-    el.append(main, amount);
-    return el;
-  }
-
-  function lineElement(line, index, rows) {
+  function lineElement(line, index, dates) {
     const el = document.createElement('li');
     let tag = '';
 
@@ -492,7 +942,7 @@
     } else if (AMOUNT_RE.test(line)) {
       el.className = 'amount';
       tag = 'amount';
-    } else if (rows.some((row) => row.dateSource && line.includes(row.dateSource))) {
+    } else if (dates.some((source) => line.includes(source))) {
       el.className = 'date';
       tag = 'date';
     }
@@ -516,6 +966,27 @@
     return el;
   }
 
+  if (!navigator.clipboard || !navigator.clipboard.writeText) els.copy.hidden = true;
+
+  els.copy.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(lastLines.join('\n'));
+      setStatus('Lines copied — paste them here and I can see exactly what the browser read.', 'done');
+    } catch (error) {
+      setStatus('Could not copy the lines.', 'error');
+    }
+  });
+
+  /* ---------------------------------------------------------------------- *
+   * Formatting
+   * ---------------------------------------------------------------------- */
+
+  /** The currency the ledger is kept in: the first one seen, else the locale's dollar. */
+  function currency() {
+    const found = ledger.transactions.find((transaction) => transaction.currencyCode);
+    return found ? found.currencyCode : DOLLAR_CURRENCY;
+  }
+
   function formatAmount(cents, currencyCode) {
     const sign = cents < 0 ? '−' : '';
     const absolute = Math.abs(Math.round(cents));
@@ -525,11 +996,49 @@
     return `${sign}${symbol}${whole}.${fraction}`;
   }
 
-  function readableDay(isoDate) {
-    const parts = String(isoDate).split('-').map(Number);
-    const date = new Date(parts[0], parts[1] - 1, parts[2]);
-    if (Number.isNaN(date.getTime())) return isoDate;
+  function signedAmount(cents) {
+    if (cents > 0) return `+${formatAmount(cents, currency())}`;
+    if (cents < 0) return `−${formatAmount(-cents, currency())}`;
+    return formatAmount(0, currency());
+  }
+
+  /** "+80" / "−50" for a calendar cell, where there is no room for cents. */
+  function compactAmount(cents) {
+    const size = Math.max(1, Math.round(Math.abs(cents) / 100));
+    return `${cents < 0 ? '−' : '+'}${size}`;
+  }
+
+  function shortDay(key) {
+    const date = dateOf(key);
     return date.toLocaleDateString(undefined, { weekday: 'short', month: 'short', day: 'numeric' });
+  }
+
+  function longDay(key) {
+    const date = dateOf(key);
+    return date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+  }
+
+  function dateOf(key) {
+    const year = Number(key.slice(0, 4));
+    const month = Number(key.slice(5, 7));
+    const day = Number(key.slice(8, 10));
+    return new Date(year, month - 1, day);
+  }
+
+  function amountFromInput(text) {
+    const cleaned = String(text || '').replace(/[^\d.]/g, '');
+    const value = Number(cleaned);
+    return Number.isFinite(value) ? Math.round(value * 100) : NaN;
+  }
+
+  /* ---------------------------------------------------------------------- *
+   * Start
+   * ---------------------------------------------------------------------- */
+
+  renderAll();
+
+  if (!saveLedger(ledger)) {
+    els.storageNote.textContent = 'This browser will not keep data for this site, so nothing will be remembered. Try a normal (not private) window.';
   }
 </script>
 </body>

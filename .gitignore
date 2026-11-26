@@ -1,0 +1,9 @@
+.DS_Store
+
+# Real financial data never belongs in this repository: screenshots, exports
+# and copies of the ledger stay on the device or in the spreadsheet.
+exports/
+*.csv
+*.tsv
+sumday-*.json
+ledger-*.json

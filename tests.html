@@ -93,8 +93,8 @@
 </head>
 <body>
 <div class="sheet">
-  <h1>Parser test</h1>
-  <p class="tagline">The real Wallet lines, checked against what the native app read.</p>
+  <h1>Tests</h1>
+  <p class="tagline">The parser and the ledger, checked against known values.</p>
 
   <section class="card">
     <h2 class="label">Result</h2>
@@ -112,6 +112,7 @@
 
 <script type="module">
   import { parseTransactions, dollarCurrencyForLocale } from './parser.js';
+  import { dayTotals, incomeShare, mergeTransactions, addDays } from './ledger.js';
   import {
     REFERENCE_DATE,
     WALLET_LINES,
@@ -200,6 +201,41 @@
     return wrong.length === 0
       ? true
       : wrong.map(([locale, code]) => `${locale || '(empty)'}: ${dollarCurrencyForLocale(locale)}, expected ${code}`).join('\n');
+  });
+
+  check('a biweekly cheque puts 1/14 of itself on each day it covers', () => {
+    const pay = { startsOn: '2026-09-18', amountCents: 140000, coversDays: 14, label: 'Pay' };
+    const first = incomeShare(pay, '2026-09-18');
+    const last = incomeShare(pay, '2026-10-01');
+    const after = incomeShare(pay, '2026-10-02');
+    let total = 0;
+    for (let offset = 0; offset < 14; offset += 1) total += incomeShare(pay, addDays('2026-09-18', offset));
+
+    if (first !== 10000 || last !== 10000) return `expected $100.00 a day, got ${first} and ${last} cents`;
+    if (after !== 0) return `the day after it ends still has ${after} cents`;
+    return total === 140000 ? true : `the fourteen shares add up to ${total} cents, not 140000`;
+  });
+
+  check('an amount that does not divide evenly still adds up', () => {
+    const odd = { startsOn: '2026-09-01', amountCents: 10000, coversDays: 3, label: '' };
+    const shares = ['2026-09-01', '2026-09-02', '2026-09-03'].map((key) => incomeShare(odd, key));
+    return shares.join('+') === '3334+3333+3333' ? true : `got ${shares.join('+')}`;
+  });
+
+  check('a day is what came in minus what went out', () => {
+    const totals = dayTotals('2026-09-24', {
+      transactions: [{ date: '2026-09-24', merchant: 'Harbour Tickets', amountCents: 2000 }],
+      incomes: [{ startsOn: '2026-09-18', amountCents: 140000, coversDays: 14, label: 'Pay' }],
+    });
+    return totals.netCents === 8000 ? true : `net is ${totals.netCents} cents, expected 8000`;
+  });
+
+  check('importing the same rows twice adds nothing the second time', () => {
+    const rows = parseTransactions(WALLET_LINES, REFERENCE_DATE, CANADA);
+    const first = mergeTransactions([], rows);
+    if (first.added.length !== 5) return `the first import added ${first.added.length} rows, expected 5`;
+    const second = mergeTransactions(first.transactions, rows);
+    return second.added.length === 0 ? true : `the second import added ${second.added.length} rows`;
   });
 
   const list = document.getElementById('checks');
