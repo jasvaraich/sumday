@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>SumDay — parser test</title>
+<meta name="theme-color" content="#F7F4ED">
+<style>
+  :root {
+    --paper: #F7F4ED;
+    --card: #FFFDF9;
+    --border: #E7E1D4;
+    --ink: #15201C;
+    --ink-2: #6C7973;
+    --out: #B4482F;
+    --in: #1F7A4D;
+    --amber: #D98E1F;
+    --amber-soft: #FBEED6;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    padding: calc(env(safe-area-inset-top, 0px) + 22px) 16px calc(env(safe-area-inset-bottom, 0px) + 28px);
+    background: var(--paper);
+    color: var(--ink);
+    font: 400 16px/1.45 -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  .sheet { max-width: 520px; margin: 0 auto; }
+
+  h1 { margin: 0 0 2px; font-size: 30px; font-weight: 600; letter-spacing: -0.024em; }
+  .tagline { margin: 0 0 18px; color: var(--ink-2); font-size: 14px; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 26px;
+    padding: 18px;
+    margin-bottom: 14px;
+  }
+
+  .label {
+    margin: 0 0 10px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.09em;
+    text-transform: uppercase;
+    color: var(--ink-2);
+  }
+
+  .summary { margin: 0; font-size: 17px; font-weight: 600; }
+  .summary[data-tone="pass"] { color: var(--in); }
+  .summary[data-tone="fail"] { color: var(--out); }
+
+  .checks { list-style: none; margin: 12px 0 0; padding: 0; font-size: 14px; }
+  .checks li { display: flex; gap: 10px; padding: 8px 0; border-top: 1px solid #F1ECE1; }
+  .checks li:first-child { border-top: 0; }
+  .checks .mark { flex: none; width: 1.1em; font-weight: 700; }
+  .checks .pass .mark { color: var(--in); }
+  .checks .fail .mark { color: var(--out); }
+  .checks .detail {
+    display: block;
+    margin-top: 4px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 12px;
+    color: var(--out);
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+  }
+
+  .txn { display: flex; align-items: baseline; gap: 12px; padding: 9px 0; border-top: 1px solid #F1ECE1; }
+  .txn:first-child { border-top: 0; }
+  .txn-main { min-width: 0; }
+  .txn-name { font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+  .txn-meta { margin-top: 2px; font-size: 12.5px; color: var(--ink-2); }
+  .txn-amount {
+    margin-left: auto;
+    font-family: ui-rounded, -apple-system, system-ui, sans-serif;
+    font-size: 15px;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--out);
+    white-space: nowrap;
+  }
+
+  .foot { padding: 4px 8px 0; text-align: center; font-size: 12.5px; color: #8A958F; }
+  .foot a { color: var(--ink-2); }
+</style>
+</head>
+<body>
+<div class="sheet">
+  <h1>Parser test</h1>
+  <p class="tagline">The real Wallet lines, checked against what the native app read.</p>
+
+  <section class="card">
+    <h2 class="label">Result</h2>
+    <p class="summary" id="summary">Running…</p>
+    <ul class="checks" id="checks"></ul>
+  </section>
+
+  <section class="card">
+    <h2 class="label">Rows produced</h2>
+    <div id="rows"></div>
+  </section>
+
+  <p class="foot"><a href="./index.html">Back to SumDay</a></p>
+</div>
+
+<script type="module">
+  import { parseTransactions, dollarCurrencyForLocale } from './parser.js';
+  import {
+    REFERENCE_DATE,
+    WALLET_LINES,
+    SPLIT_LINES,
+    EXPECTED_ROWS,
+    DATE_CASES,
+    CURRENCY_CASES,
+  } from './tests/fixtures.js';
+
+  const CANADA = { dollarCurrency: dollarCurrencyForLocale('en-CA') };
+  const checks = [];
+
+  function check(name, run) {
+    let outcome;
+    try {
+      outcome = run();
+    } catch (error) {
+      outcome = error && error.message ? error.message : String(error);
+    }
+    checks.push({ name, ok: outcome === true, detail: outcome === true ? '' : String(outcome) });
+  }
+
+  function sameRows(actual, expected) {
+    if (actual.length !== expected.length) return `expected ${expected.length} rows, got ${actual.length}`;
+    const keys = ['merchant', 'amountCents', 'currencyCode', 'date', 'dateSource'];
+    for (let i = 0; i < expected.length; i += 1) {
+      for (const key of keys) {
+        if (actual[i][key] !== expected[i][key]) {
+          return `row ${i + 1} ${key}: expected ${JSON.stringify(expected[i][key])}, got ${JSON.stringify(actual[i][key])}`;
+        }
+      }
+    }
+    return true;
+  }
+
+  check('five transactions, exactly as the native app read them', () => (
+    sameRows(parseTransactions(WALLET_LINES, REFERENCE_DATE, CANADA), EXPECTED_ROWS)
+  ));
+
+  check('the same list when merchant and amount arrive on separate lines', () => (
+    sameRows(parseTransactions(SPLIT_LINES, REFERENCE_DATE, CANADA), EXPECTED_ROWS)
+  ));
+
+  check('the misread icon "EAA" is never a merchant', () => {
+    const names = parseTransactions(WALLET_LINES, REFERENCE_DATE, CANADA).map((row) => row.merchant);
+    return names.some((name) => name.includes('EAA')) ? names.join(' | ') : true;
+  });
+
+  check('the half-hidden "$1/" row is skipped', () => {
+    const rows = parseTransactions(WALLET_LINES, REFERENCE_DATE, CANADA);
+    if (rows.some((row) => row.amountCents === 100)) return 'a $1.00 row appeared';
+    return rows.length === 5 ? true : `got ${rows.length} rows`;
+  });
+
+  check('the status bar and card branding are ignored', () => {
+    const names = parseTransactions(WALLET_LINES, REFERENCE_DATE, CANADA).map((row) => row.merchant);
+    const stray = names.filter((name) => /L123|AMERICAN|Member|Titulaire|AMEX|••/.test(name));
+    return stray.length === 0 ? true : stray.join(' | ');
+  });
+
+  check('the date grammar', () => {
+    const wrong = [];
+    for (const testCase of DATE_CASES) {
+      const [row] = parseTransactions(['Merchant $5.00 >', testCase.line], REFERENCE_DATE, CANADA);
+      if (!row) { wrong.push(`${testCase.line}: no row`); continue; }
+      if (row.date !== testCase.date) wrong.push(`${testCase.line}: date ${row.date}, expected ${testCase.date}`);
+      else if (row.dateSource !== testCase.source) wrong.push(`${testCase.line}: source "${row.dateSource}", expected "${testCase.source}"`);
+    }
+    return wrong.length === 0 ? true : wrong.join('\n');
+  });
+
+  check('the currency comes from the symbol', () => {
+    const wrong = [];
+    for (const testCase of CURRENCY_CASES) {
+      const [row] = parseTransactions([testCase.line], REFERENCE_DATE, CANADA);
+      if (!row) { wrong.push(`${testCase.line}: no row`); continue; }
+      if (row.currencyCode !== testCase.currencyCode) wrong.push(`${testCase.line}: ${row.currencyCode}, expected ${testCase.currencyCode}`);
+      if (row.amountCents !== testCase.amountCents) wrong.push(`${testCase.line}: ${row.amountCents} cents, expected ${testCase.amountCents}`);
+    }
+    return wrong.length === 0 ? true : wrong.join('\n');
+  });
+
+  check('"$" follows the locale', () => {
+    const cases = [['en-CA', 'CAD'], ['fr-CA', 'CAD'], ['en-CA-u-hc-h12', 'CAD'], ['en-US', 'USD'], ['en-GB', 'USD'], ['', 'USD']];
+    const wrong = cases.filter(([locale, code]) => dollarCurrencyForLocale(locale) !== code);
+    return wrong.length === 0
+      ? true
+      : wrong.map(([locale, code]) => `${locale || '(empty)'}: ${dollarCurrencyForLocale(locale)}, expected ${code}`).join('\n');
+  });
+
+  const list = document.getElementById('checks');
+  for (const result of checks) {
+    const item = document.createElement('li');
+    item.className = result.ok ? 'pass' : 'fail';
+    const mark = document.createElement('span');
+    mark.className = 'mark';
+    mark.textContent = result.ok ? '✓' : '✕';
+    const body = document.createElement('span');
+    body.textContent = result.name;
+    if (!result.ok) {
+      const detail = document.createElement('span');
+      detail.className = 'detail';
+      detail.textContent = result.detail;
+      body.append(detail);
+    }
+    item.append(mark, body);
+    list.append(item);
+  }
+
+  const failed = checks.filter((result) => !result.ok).length;
+  const summary = document.getElementById('summary');
+  summary.textContent = failed === 0
+    ? `All ${checks.length} checks pass`
+    : `${failed} of ${checks.length} checks failed`;
+  summary.dataset.tone = failed === 0 ? 'pass' : 'fail';
+
+  const rows = document.getElementById('rows');
+  const symbols = { CAD: '$', USD: '$', EUR: '€', GBP: '£', JPY: '¥' };
+  for (const row of parseTransactions(WALLET_LINES, REFERENCE_DATE, CANADA)) {
+    const el = document.createElement('div');
+    el.className = 'txn';
+
+    const main = document.createElement('div');
+    main.className = 'txn-main';
+    const name = document.createElement('div');
+    name.className = 'txn-name';
+    name.textContent = row.merchant;
+    const meta = document.createElement('div');
+    meta.className = 'txn-meta';
+    meta.textContent = row.date ? `${row.date} · read “${row.dateSource}”` : 'no date';
+    main.append(name, meta);
+
+    const amount = document.createElement('div');
+    amount.className = 'txn-amount';
+    amount.textContent = `${symbols[row.currencyCode] || row.currencyCode + ' '}${(row.amountCents / 100).toFixed(2)}`;
+
+    el.append(main, amount);
+    rows.append(el);
+  }
+</script>
+</body>
+</html>
